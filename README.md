@@ -102,3 +102,27 @@ Run the test suite locally or in CI:
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
+
+---
+
+## 7. Kaggle Execution Setup (Development Environment)
+
+In our Kaggle development environment (2 × NVIDIA Tesla T4 GPUs), files are partitioned across GPUs to maximize execution throughput during dataset runs:
+
+- **GPU 0 Worker**:
+  ```bash
+  python run.py --input data_chunk_0 --output results_gpu0.jsonl.gz --device cuda:0 --batch-size 32
+  ```
+- **GPU 1 Worker**:
+  ```bash
+  python run.py --input data_chunk_1 --output results_gpu1.jsonl.gz --device cuda:1 --batch-size 32
+  ```
+
+The outputs are combined into the final submission artifact:
+```bash
+cat results_gpu0.jsonl.gz results_gpu1.jsonl.gz > results.jsonl.gz
+```
+
+> [!NOTE]
+> The primary evaluation command evaluated by the employer remains standard, single-GPU, and unchanged as defined in Section 4:
+> `python run.py --input <folder of .parquet files> --output results.jsonl`

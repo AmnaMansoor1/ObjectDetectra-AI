@@ -1,0 +1,26 @@
+# AI Chat History Links and Session References
+
+# Google Antigravity Session (Local IDE / Desktop Agent)
+# Session ID: d4a31bb3-4f59-40aa-b9cc-e2af18ee2316
+# Local URI: conversation://d4a31bb3-4f59-40aa-b9cc-e2af18ee2316
+
+# ==============================================================================
+# NOTE FOR RECRUITERS & EVALUATORS:
+#
+# Google Antigravity operates as a local desktop developer environment rather than
+# a public web chat. In accordance with Section 7 of the take-home brief:
+# "Cursor, Copilot Chat and other editor tools: use the tool's export option, or copy
+# each chat into a text file."
+#
+# The chat records are provided in this directory in three accessible formats:
+#
+# 1. Candidate Prompts Only:
+#    ai_chats/prompts.md
+#
+# 2. Complete Dialogue (Prompts + Assistant Technical Architecture Responses):
+#    ai_chats/antigravity_chat.md
+#
+# 3. Raw Unedited JSON Lines Session Transcript:
+#    ai_chats/antigravity_chat.jsonl
+# Prompts: prompts.md
+# ==============================================================================
