@@ -191,39 +191,9 @@ The tests were executed on Kaggle, with 21 tests passing.
 
 Testing on actual FineVideo samples also confirmed nonempty object detections. The employer's hidden-test accuracy thresholds have not been independently verified.
 
-## 10. Multi-GPU Dataset Execution
 
-For the Kaggle processing run, the 50 Parquet shards were divided between two Tesla T4 GPUs.
 
-Each worker processes a separate input directory:
-
-**GPU 0**
-
-```bash
-python run.py \
-  --input data_chunk_0 \
-  --output results_gpu0.jsonl.gz \
-  --device cuda:0 \
-  --batch-size 8
-```
-
-**GPU 1**
-
-```bash
-python run.py \
-  --input data_chunk_1 \
-  --output results_gpu1.jsonl.gz \
-  --device cuda:1 \
-  --batch-size 8
-```
-
-The input directories must be prepared separately with distinct Parquet shards. The two workers produce independent output files.
-
-The completed outputs can be combined into a single gzip-compressed JSON Lines artifact.
-
-The standard evaluation CLI remains unchanged and does not require multi-GPU execution.
-
-## 11. Performance and Limitations
+## 10. Performance and Limitations
 
 Initial testing was conducted on NVIDIA Tesla T4 GPUs.
 
@@ -233,7 +203,7 @@ Performance measurements and the hardware used for processing are documented in 
 
 **Dataset completion status:** The available submission results cover only the videos successfully processed before the deadline. The full 50-file dataset run was not completed, and the included output must not be interpreted as covering all 125 hours.
 
-## 12. Repository Structure
+## 11. Repository Structure
 
 ```text
 ObjectDetectra-AI/
@@ -256,7 +226,7 @@ The `WRITEUP.md` file contains the candidate's independently written responses t
 
 The `ai_chats/` directory contains AI interaction references and exported chat history.
 
-## 13. Evaluation Criteria
+## 12. Evaluation Criteria
 
 The employer evaluates the submitted script using unseen FineVideo videos and reference outputs generated through full-frame YOLO11l inference.
 
