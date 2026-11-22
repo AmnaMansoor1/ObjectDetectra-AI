@@ -1,0 +1,9 @@
+# ObjectDetectra AI Dependencies
+# Compatible with Ubuntu 22.04 (Python 3.11) and Kaggle (Python 3.13)
+
+torch==2.5.1
+torchvision==0.20.1
+ultralytics==8.3.40
+av==14.0.1
+pyarrow==18.1.0
+numpy==1.26.4

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+*.pt
+*.engine
+*.parquet
+finevideo/
+sample_data/
+results.jsonl
+results_sample.jsonl*
+results_one_video.jsonl*
+.ipynb_checkpoints/
