@@ -228,7 +228,7 @@ The `ai_chats/` directory contains AI interaction references and exported chat h
 
 ## 12. Evaluation Criteria
 
-The employer evaluates the submitted script using unseen FineVideo videos and reference outputs generated through full-frame YOLO11l inference.
+The submitted script is evaluated using unseen FineVideo videos and reference outputs generated through full-frame YOLO11l inference.
 
 | Metric | Required threshold |
 |---|---|
