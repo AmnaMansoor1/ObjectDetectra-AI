@@ -1,24 +1,64 @@
-# ObjectDetectra AI: Video Indexing at Speed
+# ObjectDetectra AI
+### Video Indexing at Speed using YOLO11l
 
-High-throughput, mathematically rigorous video indexing pipeline designed to extract fine-grained object and people statistics from large-scale Parquet datasets using official Ultralytics YOLO11l weights (`yolo11l.pt`).
+A Python-based video indexing pipeline designed to process large-scale video datasets stored in Apache Parquet files.
 
----
+The system uses the official pretrained **Ultralytics YOLO11l** model to detect five object categories and calculate per-second people counts. It supports GPU-accelerated inference, incremental result writing, and error handling for damaged videos.
 
-## 1. System Requirements & Environment
+## 1. Project Overview
 
-The pipeline is engineered and validated for:
-- **Evaluation Environment**: Ubuntu 22.04 LTS, Python 3.11, CUDA 12-compatible drivers, NVIDIA RTX 4090 (24 GB VRAM), 32 CPU threads, 64 GB RAM.
-- **Execution & Development**: Antigravity (Windows) and Kaggle Linux environment (Python 3.13, 2× NVIDIA Tesla T4 GPUs).
+The assignment involves approximately **125 hours of video**, distributed across the first 50 Parquet files of the Hugging Face FineVideo dataset.
 
----
+For each second of every video, the system:
 
-## 2. Installation & Setup
+- Detects `person`, `car`, `dog`, `laptop`, and `cell phone`.
+- Determines object presence using the specified 50% frame-occurrence threshold.
+- Calculates the median number of people detected per frame.
+- Produces structured JSON Lines output.
+- Continues processing when individual videos are damaged.
 
-### System Packages (Ubuntu 22.04)
-The PyAV package bundles FFmpeg libraries, but standard multimedia system dependencies ensure robust decoder initialization:
+### Model Configuration
+
+| Parameter | Value |
+|---|---|
+| Model | YOLO11l |
+| Weights | `yolo11l.pt` |
+| Input image size | 640 |
+| Confidence threshold | 0.4 |
+| NMS IoU threshold | 0.7 |
+| Preprocessing | Ultralytics default letterbox |
+| NMS | Class-aware |
+| Input colour order | BGR |
+
+## 2. System Requirements
+
+### Evaluation Environment
+
+The employer's evaluation environment is:
+
+| Component | Specification |
+|---|---|
+| Operating system | Ubuntu 22.04 |
+| Python | 3.11 |
+| GPU | NVIDIA RTX 4090 |
+| GPU memory | 24 GB |
+| CPU | 32 threads |
+| RAM | 64 GB |
+| GPU driver | CUDA 12 compatible |
+
+### Development Environment
+
+The implementation was developed using Google Antigravity on Windows and tested using Kaggle's free GPU environment.
+
+The Kaggle environment provided two NVIDIA Tesla T4 GPUs, approximately 31 GB RAM, and four logical CPU threads.
+
+## 3. Installation
+
+### Ubuntu System Dependencies
 
 ```bash
-sudo apt-get update && sudo apt-get install -y \
+sudo apt-get update
+sudo apt-get install -y \
     libavformat-dev \
     libavcodec-dev \
     libavdevice-dev \
@@ -28,101 +68,209 @@ sudo apt-get update && sudo apt-get install -y \
     pkg-config
 ```
 
-### Python Dependencies
-Install the exact pinned dependencies in your Python virtual environment:
+### Python Environment
 
 ```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+All Python dependencies required by the application are listed in `requirements.txt`.
 
-## 3. Preparation Step (Executed with Internet Access)
+## 4. Model Preparation
 
-Before the evaluation run begins, execute the preparation script to fetch the official YOLO11l weights (`yolo11l.pt`). This step requires internet access and ensures that all subsequent indexing executes completely offline:
+The official YOLO11l weights must be downloaded before the offline evaluation run.
 
 ```bash
 python prepare.py
 ```
 
-This verifies and caches `yolo11l.pt` in the working directory.
+This preparation step requires internet access and makes `yolo11l.pt` available for subsequent inference.
 
----
+## 5. Running the Pipeline
 
-## 4. Video Indexing Execution (Offline Evaluation)
-
-The indexing pipeline runs without internet access using the required standard CLI command:
+The required command-line interface is:
 
 ```bash
-python run.py --input <folder of .parquet files> --output results.jsonl
+python run.py --input <folder> --output results.jsonl
 ```
 
-### Gzip Compressed Output Support
-To write directly to compressed JSON Lines (saving storage and meeting submission artifact requirements):
+For gzip-compressed output:
 
 ```bash
-python run.py --input <folder of .parquet files> --output results.jsonl.gz
+python run.py --input <folder> --output results.jsonl.gz
 ```
 
-### Additional Configurable Parameters
-- `--weights <path>`: Path to YOLO11l model weights (default: `yolo11l.pt`).
-- `--batch-size <int>`: Batch size for batched GPU forward passes (default: `32`).
-- `--device <str>`: Explicit device selection, e.g. `cuda:0` or `cpu` (default: auto-detected).
+### Optional Arguments
 
----
+| Argument | Description |
+|---|---|
+| `--weights` | Path to official YOLO11l weights |
+| `--batch-size` | Number of frames in an inference batch |
+| `--device` | Inference device, e.g. `cuda:0` or `cpu` |
 
-## 5. Architectural & Mathematical Invariants
+The implementation supports selecting a GPU device and configuring the inference batch size.
 
-1. **Exhaustive Frame Processing**: Every decodable frame is processed. Frame skipping, sampling strides, and temporal decimation are prohibited.
-2. **Relative Timestamp Alignment**:
-   $$\Delta t = t_{\text{frame}} - t_{\text{first\_decoded\_frame}}$$
-   $$\text{second} = \lfloor \Delta t \rfloor$$
-3. **Contiguous Second Coverage**: Emits records for all contiguous integer seconds $0, 1, \dots, \lfloor \Delta t_{\text{last\_frame}} \rfloor$. Unpopulated seconds contain `objects: []` and `people: 0`.
-4. **Target Classes**:
-   - `person` (COCO ID 0)
-   - `car` (COCO ID 2)
-   - `dog` (COCO ID 16)
-   - `laptop` (COCO ID 63)
-   - `cell phone` (COCO ID 67)
-5. **Object Presence Threshold**: An object is recorded as present in a second if detected in at least half of that second's frames ($\text{count} \ge \lceil N_{\text{second}} / 2 \rceil$).
-6. **People Count Median (Round-Down)**: Median of people detections across all frames in that second. For even-length counts, halfway medians are explicitly rounded down using integer division:
-   $$\text{people} = \left\lfloor \frac{P_{n/2 - 1} + P_{n/2}}{2} \right\rfloor$$
-7. **Orientation Normalization**: Container metadata and stream display matrices are inspected. Rotated videos ($90^\circ, 180^\circ, 270^\circ$) are rotated upright prior to inference.
-8. **Fault Isolation**: Corrupted or truncated MP4 streams do not interrupt execution. All seconds completed prior to decoding failure are flushed, followed by a structured error record:
-   ```json
-   {"video": "train-00003-of-01357.parquet:5", "error": "could not decode video"}
-   ```
+## 6. Processing Architecture
 
----
+The processing pipeline follows these stages:
 
-## 6. Running Unit & Integration Tests
+1. **Parquet ingestion:** PyArrow reads the video bytes from the `mp4` column.
+2. **Video decoding:** PyAV decodes the embedded MP4 video into frames.
+3. **Timestamp alignment:** Frames are assigned to seconds relative to the first decoded frame.
+4. **Orientation handling:** Rotation metadata is considered before inference.
+5. **Object detection:** YOLO11l processes batches of frames on the selected device.
+6. **Temporal aggregation:** Frame-level detections are combined into per-second object-presence and people-count results.
+7. **Serialization:** Results are written incrementally to JSONL or gzip-compressed JSONL.
 
-Run the test suite locally or in CI:
+### Temporal Aggregation
+
+For a second containing \(N\) frames, an object is considered present when detected in at least:
+
+\[
+\left\lceil \frac{N}{2} \right\rceil
+\]
+
+frames.
+
+The people count is the median of the per-frame person counts, rounded down for halfway values.
+
+The correctness baseline processes every decoded frame. Temporal sampling would require separate validation against the full-frame reference.
+
+## 7. Output Format
+
+Each successful record contains the video identifier, second index, detected objects, and people count.
+
+```json
+{"video":"train-00003-of-01357.parquet:4","second":12,"objects":["person","laptop"],"people":2}
+```
+
+Seconds without qualifying detections contain:
+
+```json
+{"video":"train-00003-of-01357.parquet:4","second":13,"objects":[],"people":0}
+```
+
+An unsuccessful video produces an error record:
+
+```json
+{"video":"train-00003-of-01357.parquet:5","error":"could not decode video"}
+```
+
+The video identifier consists of the Parquet filename and its zero-based row index.
+
+## 8. Error Handling
+
+The pipeline is designed to handle individual video failures without terminating the entire dataset run.
+
+If decoding fails partway through a video, previously completed second records are preserved, and an error record is written.
+
+The system also processes input files incrementally to avoid loading the complete dataset into memory.
+
+## 9. Testing and Validation
+
+Run the unit and integration tests using:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
----
+The test suite covers:
 
-## 7. Kaggle Execution Setup (Development Environment)
+- Object presence at the exact 50% threshold
+- Odd and even frame counts
+- Median rounding behaviour
+- Empty detections
+- JSONL and gzip output
+- Video identifier formatting
+- Partial decoding failures
+- PyAV-based video decoding
 
-In our Kaggle development environment (2 × NVIDIA Tesla T4 GPUs), files are partitioned across GPUs to maximize execution throughput during dataset runs:
+The tests were executed on Kaggle, with 21 tests passing.
 
-- **GPU 0 Worker**:
-  ```bash
-  python run.py --input data_chunk_0 --output results_gpu0.jsonl.gz --device cuda:0 --batch-size 32
-  ```
-- **GPU 1 Worker**:
-  ```bash
-  python run.py --input data_chunk_1 --output results_gpu1.jsonl.gz --device cuda:1 --batch-size 32
-  ```
+Testing on actual FineVideo samples also confirmed nonempty object detections. The employer's hidden-test accuracy thresholds have not been independently verified.
 
-The outputs are combined into the final submission artifact:
+## 10. Multi-GPU Dataset Execution
+
+For the Kaggle processing run, the 50 Parquet shards were divided between two Tesla T4 GPUs.
+
+Each worker processes a separate input directory:
+
+**GPU 0**
+
 ```bash
-cat results_gpu0.jsonl.gz results_gpu1.jsonl.gz > results.jsonl.gz
+python run.py \
+  --input data_chunk_0 \
+  --output results_gpu0.jsonl.gz \
+  --device cuda:0 \
+  --batch-size 8
 ```
 
-> [!NOTE]
-> The primary evaluation command evaluated by the employer remains standard, single-GPU, and unchanged as defined in Section 4:
-> `python run.py --input <folder of .parquet files> --output results.jsonl`
+**GPU 1**
+
+```bash
+python run.py \
+  --input data_chunk_1 \
+  --output results_gpu1.jsonl.gz \
+  --device cuda:1 \
+  --batch-size 8
+```
+
+The input directories must be prepared separately with distinct Parquet shards. The two workers produce independent output files.
+
+The completed outputs can be combined into a single gzip-compressed JSON Lines artifact.
+
+The standard evaluation CLI remains unchanged and does not require multi-GPU execution.
+
+## 11. Performance and Limitations
+
+Initial testing was conducted on NVIDIA Tesla T4 GPUs.
+
+The implementation has demonstrated GPU-based inference and incremental output generation. Full-dataset processing is computationally intensive, and temporary Kaggle session interruptions can result in the loss of unsaved progress.
+
+Performance measurements and the hardware used for processing are documented in `HARDWARE.md`.
+
+**Dataset completion status:** The available submission results cover only the videos successfully processed before the deadline. The full 50-file dataset run was not completed, and the included output must not be interpreted as covering all 125 hours.
+
+## 12. Repository Structure
+
+```text
+ObjectDetectra-AI/
+├── run.py
+├── prepare.py
+├── requirements.txt
+├── README.md
+├── HARDWARE.md
+├── WRITEUP.md
+├── results.jsonl.gz
+├── tests/
+│   ├── test_aggregation.py
+│   └── test_output.py
+└── ai_chats/
+    ├── links.txt
+    └── antigravity_chat.jsonl
+```
+
+The `WRITEUP.md` file contains the candidate's independently written responses to the assignment questions.
+
+The `ai_chats/` directory contains AI interaction references and exported chat history.
+
+## 13. Evaluation Criteria
+
+The employer evaluates the submitted script using unseen FineVideo videos and reference outputs generated through full-frame YOLO11l inference.
+
+| Metric | Required threshold |
+|---|---|
+| Object-presence F1 | ≥ 0.95 |
+| Exact people count | ≥ 85% |
+| People count within ±1 | ≥ 95% |
+| Maximum evaluation runtime | 6 hours |
+
+Accuracy requirements must be met before execution speed is considered.
+
+---
+
+**Project:** ObjectDetectra AI  
+**Assignment:** Video Indexing at Speed  
+**Author:** Amna Mansoor  
